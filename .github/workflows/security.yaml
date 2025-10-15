@@ -1,0 +1,49 @@
+name: Security and Compliance
+
+on:
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    # Allow manual trigger
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Daily Security Scan
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Build all manifests for scanning
+        run: |
+          mkdir -p security-scan
+          kustomize build api-gateway/overlays/development > security-scan/dev.yaml
+          kustomize build api-gateway/overlays/production > security-scan/prod.yaml
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "config"
+          scan-ref: "security-scan/"
+          format: "sarif"
+          output: "trivy-results.sarif"
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Check for high severity issues
+        run: |
+          if grep -q '"level": "error"' trivy-results.sarif; then
+            echo "❌ High severity security issues found!"
+            echo "Please review the Security tab in GitHub"
+            exit 1
+          else
+            echo "✅ No critical security issues found"
+          fi

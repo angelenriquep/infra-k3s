@@ -1,0 +1,175 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "api-gateway/**"
+      - "argocd/**"
+      - "bootstrap/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "api-gateway/**"
+      - "argocd/**"
+      - "bootstrap/**"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # Job 1: Validación y Tests
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Kubernetes Manifests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+        with:
+          kustomize-version: "5.0.0"
+
+      - name: Validate Kustomize builds
+        run: |
+          echo "🔍 Validating development overlay..."
+          kustomize build api-gateway/overlays/development > /tmp/dev-manifest.yaml
+
+          echo "🔍 Validating production overlay..."
+          kustomize build api-gateway/overlays/production > /tmp/prod-manifest.yaml
+
+          echo "✅ Kustomize builds successful"
+
+      - name: Validate Kubernetes YAML
+        uses: instrumenta/kubeval-action@master
+        with:
+          files: |
+            /tmp/dev-manifest.yaml
+            /tmp/prod-manifest.yaml
+
+      - name: Validate ArgoCD Applications
+        run: |
+          echo "🔍 Validating ArgoCD applications..."
+          for file in argocd/applications/*.yaml bootstrap/*.yaml; do
+            if [[ -f "$file" ]]; then
+              echo "Validating $file"
+              # Basic YAML syntax check
+              python -c "import yaml; yaml.safe_load(open('$file'))"
+            fi
+          done
+          echo "✅ ArgoCD applications valid"
+
+  # Job 2: Security Scanning
+  security:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    needs: validate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov (Infrastructure as Code Security)
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: kubernetes
+          output_format: sarif
+          output_file_path: reports/results.sarif
+          skip_check: CKV_K8S_43,CKV_K8S_35 # Skip some checks for demo setup
+
+      - name: Upload Checkov results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: reports/results.sarif
+
+  # Job 3: Generate Manifests for ArgoCD
+  build-manifests:
+    runs-on: ubuntu-latest
+    name: Build and Validate Manifests
+    needs: [validate, security]
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Build development manifests
+        run: |
+          mkdir -p manifests/development
+          kustomize build api-gateway/overlays/development > manifests/development/all.yaml
+
+          echo "📊 Development Manifest Stats:"
+          echo "Resources: $(grep -c '^---' manifests/development/all.yaml)"
+          echo "ConfigMaps: $(grep -c 'kind: ConfigMap' manifests/development/all.yaml)"
+          echo "Deployments: $(grep -c 'kind: Deployment' manifests/development/all.yaml)"
+
+      - name: Build production manifests
+        run: |
+          mkdir -p manifests/production
+          kustomize build api-gateway/overlays/production > manifests/production/all.yaml
+
+          echo "📊 Production Manifest Stats:"
+          echo "Resources: $(grep -c '^---' manifests/production/all.yaml)"
+          echo "ConfigMaps: $(grep -c 'kind: ConfigMap' manifests/production/all.yaml)"
+          echo "Deployments: $(grep -c 'kind: Deployment' manifests/production/all.yaml)"
+
+      - name: Upload manifests as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: kubernetes-manifests
+          path: manifests/
+          retention-days: 30
+
+  # Job 4: Notify ArgoCD (opcional)
+  notify-argocd:
+    runs-on: ubuntu-latest
+    name: Notify ArgoCD
+    needs: build-manifests
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Trigger ArgoCD Sync (Development)
+        run: |
+          echo "🚀 Changes detected in main branch"
+          echo "ArgoCD will automatically sync development environment"
+          echo "Production requires manual approval in ArgoCD UI"
+
+          # Si tienes ArgoCD CLI configurado, puedes hacer:
+          # argocd app sync api-gateway-dev
+
+          # O webhook a ArgoCD:
+          # curl -X POST "$ARGOCD_WEBHOOK_URL" \
+          #   -H "Content-Type: application/json" \
+          #   -d '{"revision": "${{ github.sha }}"}'
+
+  # Job 5: Frontend Tests (opcional para el HTML)
+  frontend-tests:
+    runs-on: ubuntu-latest
+    name: Frontend Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Validate HTML
+        run: |
+          echo "🔍 Validating HTML syntax..."
+          # Install HTML validator
+          npm install -g html-validate
+
+          # Validate HTML files
+          if [ -f "api-gateway/base/frontend/index.html" ]; then
+            html-validate api-gateway/base/frontend/index.html
+            echo "✅ HTML validation passed"
+          fi
+
+      - name: Test nginx config
+        run: |
+          echo "🔍 Validating nginx configuration..."
+          # Test nginx config syntax
+          docker run --rm -v "$PWD/api-gateway/base/frontend/nginx.conf:/etc/nginx/nginx.conf:ro" \
+            nginx:alpine nginx -t
+          echo "✅ Nginx config validation passed"

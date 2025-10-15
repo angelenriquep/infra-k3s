@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reference base configuration
+resources:
+  - ../../base
+
+# Development-specific settings
+namePrefix: dev-
+
+# Development patches
+patchesStrategicMerge:
+  - replica-patch.yaml
+  - resource-patch.yaml
+
+# Development-specific ConfigMaps
+configMapGenerator:
+  - name: app-config
+    literals:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=debug
+      - API_BASE_URL=http://192.168.88.243:30080

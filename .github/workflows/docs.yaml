@@ -1,0 +1,113 @@
+name: Documentation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**.md"
+      - "api-gateway/**"
+      - "argocd/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "**.md"
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    name: Generate Documentation
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Generate architecture diagram
+        run: |
+          echo "📊 Generating project documentation..."
+
+          # Create docs directory
+          mkdir -p docs
+
+          # Generate resource overview
+          cat > docs/resources.md << 'EOF'
+          # API Gateway Resources Overview
+
+          ## Development Environment
+
+          ```yaml
+          EOF
+
+          echo "### Resources in development overlay:" >> docs/resources.md
+          kustomize build api-gateway/overlays/development | grep -E "^(kind:|  name:)" | sed 's/^/  /' >> docs/resources.md
+
+          echo "" >> docs/resources.md
+          echo "## Production Environment" >> docs/resources.md
+          echo "" >> docs/resources.md
+          echo "### Resources in production overlay:" >> docs/resources.md
+          kustomize build api-gateway/overlays/production | grep -E "^(kind:|  name:)" | sed 's/^/  /' >> docs/resources.md
+
+          echo '```' >> docs/resources.md
+
+      - name: Generate deployment guide
+        run: |
+          cat > docs/deployment.md << 'EOF'
+          # Deployment Guide
+
+          ## Prerequisites
+          - Kubernetes cluster (K3s recommended)
+          - kubectl configured
+          - Envoy Gateway installed
+
+          ## Quick Start
+
+          ### Development
+          ```bash
+          kubectl apply -k api-gateway/overlays/development
+          ```
+
+          ### Production
+          ```bash
+          kubectl apply -k api-gateway/overlays/production
+          ```
+
+          ## With ArgoCD
+
+          ### Install ArgoCD
+          ```bash
+          kubectl create namespace argocd
+          kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+          ```
+
+          ### Deploy Applications
+          ```bash
+          kubectl apply -f bootstrap/root-app.yaml
+          ```
+
+          ## Access URLs
+          - Frontend: http://YOUR_NODE_IP:30080/frontend
+          - Backend API: http://YOUR_NODE_IP:30080/
+          - Hostname API: http://YOUR_NODE_IP:30080/api/ (with Host: www.example.com header)
+          EOF
+
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/
+          retention-days: 90
+
+      - name: Commit documentation updates
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+
+          if [ -n "$(git status --porcelain docs/)" ]; then
+            git add docs/
+            git commit -m "docs: auto-update generated documentation [skip ci]"
+            git push
+          else
+            echo "No documentation changes to commit"
+          fi

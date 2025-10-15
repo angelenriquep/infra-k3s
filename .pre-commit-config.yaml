@@ -1,0 +1,63 @@
+# Pre-commit hooks for code quality
+# Install with: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-added-large-files
+      - id: check-merge-conflict
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.32.0
+    hooks:
+      - id: yamllint
+        args: [-c=.yamllint.yaml]
+
+  - repo: local
+    hooks:
+      - id: kustomize-validate
+        name: Validate Kustomize builds
+        entry: bash
+        language: script
+        files: '^api-gateway/.*\.yaml$'
+        args:
+          - -c
+          - |
+            echo "🔍 Validating Kustomize builds..."
+            if command -v kustomize >/dev/null 2>&1; then
+              kustomize build api-gateway/overlays/development >/dev/null
+              kustomize build api-gateway/overlays/production >/dev/null
+              echo "✅ Kustomize validation passed"
+            else
+              echo "⚠️  Kustomize not found, skipping validation"
+            fi
+
+      - id: check-frontend-files
+        name: Check frontend files syntax
+        entry: bash
+        language: script
+        files: "^api-gateway/base/frontend/.*"
+        args:
+          - -c
+          - |
+            echo "🔍 Checking frontend files..."
+            # Check HTML syntax (basic)
+            if [[ -f "api-gateway/base/frontend/index.html" ]]; then
+              if ! grep -q "</html>" "api-gateway/base/frontend/index.html"; then
+                echo "❌ HTML file seems incomplete"
+                exit 1
+              fi
+            fi
+            # Check nginx config syntax (basic)
+            if [[ -f "api-gateway/base/frontend/nginx.conf" ]]; then
+              if ! grep -q "server {" "api-gateway/base/frontend/nginx.conf"; then
+                echo "❌ Nginx config seems incomplete"
+                exit 1
+              fi
+            fi
+            echo "✅ Frontend files check passed"
