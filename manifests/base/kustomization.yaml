@@ -3,7 +3,7 @@ kind: Kustomization
 
 # Base resources
 resources:
-  - backend-app.yaml
+  - backend-api.yaml
   - gateway-infrastructure.yaml
   - httproutes.yaml
   - nodeport-gateway.yaml

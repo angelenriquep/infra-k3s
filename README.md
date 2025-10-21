@@ -1,13 +1,13 @@
-# ArgoCD Setup para API Gateway
+# ArgoCD Setup for API Gateway
 
-## Estructura Completa del Repositorio
+## Complete Repository Structure
 
 ```
 infra-k3s/
-├── api-gateway/              ← Tu aplicación actual
+├── manifests/                ← Kubernetes manifests
 │   ├── base/
 │   │   ├── kustomization.yaml
-│   │   ├── backend-app.yaml
+│   │   ├── backend-api.yaml
 │   │   ├── frontend-deployment-service.yaml
 │   │   ├── gateway-infrastructure.yaml
 │   │   ├── httproutes.yaml
@@ -25,7 +25,7 @@ infra-k3s/
 │           ├── replica-patch.yaml
 │           ├── resource-patch.yaml
 │           └── security-patch.yaml
-├── argocd/                   ← Configuración de ArgoCD
+├── argocd/                   ← ArgoCD Configuration
 │   ├── applications/
 │   │   ├── kustomization.yaml
 │   │   ├── api-gateway-dev.yaml
@@ -37,38 +37,37 @@ infra-k3s/
 └── README.md
 ```
 
-## Pasos para Desplegar
+## Deployment Steps
 
-### 1. Instalar ArgoCD en K3s
+### 1. Install ArgoCD on K3s
 
 ```bash
 kubectl create namespace argocd
 kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
 ```
 
-### 2. Acceso a ArgoCD UI
+### 2. Access ArgoCD UI
 
 ```bash
 # Port forward
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 
-# Obtener password
 kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 ```
 
-### 3. Configurar Repositorio Git
+### 3. Configure Git Repository
 
-- Crear repo: `https://github.com/tu-usuario/infra-k3s`
+- Create repo: `https://github.com/your-username/infra-k3s`
 - Subir todo el directorio al repo
 - Actualizar URLs en los archivos YAML
 
-### 4. Desplegar ArgoCD Apps
+### 4. Deploy ArgoCD Apps
 
 ```bash
-# Desplegar proyecto
+# Deploy project
 kubectl apply -f argocd/projects/api-gateway-project.yaml
 
-# Desplegar bootstrap (App of Apps)
+# Deploy bootstrap (App of Apps)
 kubectl apply -f bootstrap/root-app.yaml
 ```
 
@@ -77,10 +76,9 @@ kubectl apply -f bootstrap/root-app.yaml
 ### Development
 ```bash
 git checkout -b feature/new-feature
-# Hacer cambios
 git commit -m "feat: add new feature"
 git push origin feature/new-feature
-# ArgoCD despliega automáticamente a development
+# ArgoCD automatically deploys to development
 ```
 
 ### Production
@@ -91,21 +89,64 @@ git push origin main
 # ArgoCD detecta pero requiere sync manual para production
 ```
 
-## Comandos Útiles
+## Useful Commands
 
 ```bash
-# Ver aplicaciones
+# View applications
 kubectl get applications -n argocd
 
 # Sync desde CLI
 argocd app sync api-gateway-dev
 argocd app sync api-gateway-prod
 
-# Ver logs
+# View logs
 kubectl logs -n argocd deployment/argocd-application-controller
 ```
 
-## Configuración
+## 🐳 Docker Images
+
+### Backend Go API
+
+Para construir y subir la imagen del backend:
+
+```bash
+# Navegar al directorio del backend
+cd backend
+
+# Construir la imagen Docker
+docker build -t backend:v1.0.1 .
+
+# Etiquetar para Docker Hub
+docker tag backend:v1.0.1 mockingbird2912/api-gateway-backend:v1.0.1
+
+# Login to Docker Hub (if not logged in)
+docker login
+
+# Subir la imagen
+docker push mockingbird2912/api-gateway-backend:v1.0.1
+```
+
+### Complete command (single line)
+
+```bash
+cd backend && docker build -t backend:v1.0.1 . && docker tag backend:v1.0.1 mockingbird2912/api-gateway-backend:v1.0.1 && docker push mockingbird2912/api-gateway-backend:v1.0.1
+```
+
+### Actualizar imagen en Kubernetes
+
+After uploading the new image, update the version in the deployment:
+
+```bash
+# Edit backend-api.yaml to change image version
+# Then apply changes
+cd manifests/base
+kubectl apply -f backend-api.yaml
+
+# O usar kustomize
+kubectl apply -k overlays/development
+```
+
+## Configuration
 
 - **Development**: Auto-sync habilitado
 - **Production**: Sync manual requerido

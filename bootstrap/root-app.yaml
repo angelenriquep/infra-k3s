@@ -1,5 +1,5 @@
 # Bootstrap Application - App of Apps Pattern
-# Esta aplicación despliega todas las demás aplicaciones
+# This application deploys all other applications
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -15,7 +15,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/tu-usuario/infra-k3s # Cambia por tu repo
+    repoURL: https://github.com/angelenriquep/infra-k3s
     targetRevision: main
     path: argocd/applications
 

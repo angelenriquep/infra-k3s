@@ -4,13 +4,13 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "api-gateway/**"
+      - "manifests/**"
       - "argocd/**"
       - "bootstrap/**"
   pull_request:
     branches: [main]
     paths:
-      - "api-gateway/**"
+      - "manifests/**"
       - "argocd/**"
       - "bootstrap/**"
 
@@ -19,7 +19,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Job 1: Validación y Tests
+  # Job 1: Validation and Tests
   validate:
     runs-on: ubuntu-latest
     name: Validate Kubernetes Manifests
@@ -35,10 +35,10 @@ jobs:
       - name: Validate Kustomize builds
         run: |
           echo "🔍 Validating development overlay..."
-          kustomize build api-gateway/overlays/development > /tmp/dev-manifest.yaml
+          kustomize build manifests/overlays/development > /tmp/dev-manifest.yaml
 
           echo "🔍 Validating production overlay..."
-          kustomize build api-gateway/overlays/production > /tmp/prod-manifest.yaml
+          kustomize build manifests/overlays/production > /tmp/prod-manifest.yaml
 
           echo "✅ Kustomize builds successful"
 
@@ -101,7 +101,7 @@ jobs:
       - name: Build development manifests
         run: |
           mkdir -p manifests/development
-          kustomize build api-gateway/overlays/development > manifests/development/all.yaml
+          kustomize build manifests/overlays/development > manifests/development/all.yaml
 
           echo "📊 Development Manifest Stats:"
           echo "Resources: $(grep -c '^---' manifests/development/all.yaml)"
@@ -111,7 +111,7 @@ jobs:
       - name: Build production manifests
         run: |
           mkdir -p manifests/production
-          kustomize build api-gateway/overlays/production > manifests/production/all.yaml
+          kustomize build manifests/overlays/production > manifests/production/all.yaml
 
           echo "📊 Production Manifest Stats:"
           echo "Resources: $(grep -c '^---' manifests/production/all.yaml)"
@@ -161,8 +161,8 @@ jobs:
           npm install -g html-validate
 
           # Validate HTML files
-          if [ -f "api-gateway/base/frontend/index.html" ]; then
-            html-validate api-gateway/base/frontend/index.html
+          if [ -f "manifests/base/frontend/index.html" ]; then
+            html-validate manifests/base/frontend/index.html
             echo "✅ HTML validation passed"
           fi
 
@@ -170,6 +170,6 @@ jobs:
         run: |
           echo "🔍 Validating nginx configuration..."
           # Test nginx config syntax
-          docker run --rm -v "$PWD/api-gateway/base/frontend/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          docker run --rm -v "$PWD/manifests/base/frontend/nginx.conf:/etc/nginx/nginx.conf:ro" \
             nginx:alpine nginx -t
           echo "✅ Nginx config validation passed"

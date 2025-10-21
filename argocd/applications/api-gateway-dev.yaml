@@ -15,9 +15,9 @@ spec:
   project: api-gateway
 
   source:
-    repoURL: https://github.com/tu-usuario/infra-k3s # Cambia por tu repo
+    repoURL: https://github.com/your-username/infra-k3s # Change to your repo
     targetRevision: main # o develop branch para dev
-    path: api-gateway/overlays/development
+    path: manifests/overlays/development
 
   destination:
     server: https://kubernetes.default.svc
@@ -25,11 +25,11 @@ spec:
 
   syncPolicy:
     automated:
-      prune: true # Elimina recursos que ya no están en Git
-      selfHeal: true # Auto-corrige drift del cluster
+      prune: true # Delete resources no longer in Git
+      selfHeal: true # Auto-correct cluster drift
       allowEmpty: false
     syncOptions:
-      - CreateNamespace=true # Crea namespace si no existe
+      - CreateNamespace=true # Create namespace if not exists
       - PrunePropagationPolicy=foreground
       - PruneLast=true
     retry:
@@ -44,7 +44,7 @@ spec:
     - group: apps
       kind: Deployment
       jsonPointers:
-        - /spec/replicas # Ignora cambios manuales en replicas (HPA)
+        - /spec/replicas # Ignore manual replica changes (HPA)
 
   # Notificaciones y hooks
   revisionHistoryLimit: 10

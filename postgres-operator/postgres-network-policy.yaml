@@ -1,0 +1,75 @@
+---
+# NetworkPolicy to restrict access to PostgreSQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: postgres-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      application: spilo
+      cluster-name: api-gateway-postgres
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Only allow connections from specific pods
+    - from:
+        # Permitir desde el backend de API Gateway (original)
+        - podSelector:
+            matchLabels:
+              app: backend
+        # Permitir desde el backend Go
+        - podSelector:
+            matchLabels:
+              app: backend
+        # Allow from postgres-client (for administration)
+        - podSelector:
+            matchLabels:
+              run: postgres-client
+        # Permitir desde el operador PostgreSQL
+        - namespaceSelector:
+            matchLabels:
+              name: postgres-operator
+        # Allow internal traffic between PostgreSQL pods (replication)
+        - podSelector:
+            matchLabels:
+              application: spilo
+              cluster-name: api-gateway-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 8008 # Patroni API
+        - protocol: TCP
+          port: 8080 # Patroni REST API
+  egress:
+    # Permitir conexiones salientes para:
+    # 1. Replication between PostgreSQL pods
+    - to:
+        - podSelector:
+            matchLabels:
+              application: spilo
+              cluster-name: api-gateway-postgres
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 8008
+        - protocol: TCP
+          port: 8080
+    # 2. DNS queries
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # 3. Kubernetes API server (para Patroni)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 6443

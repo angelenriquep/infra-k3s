@@ -1,0 +1,47 @@
+---
+# PostgreSQL Cluster Example for API Gateway Backend
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: api-gateway-postgres
+  namespace: default
+spec:
+  teamId: "api-gateway"
+  volume:
+    size: 1Gi
+  numberOfInstances: 2 # 1 primary + 1 replica
+  users:
+    # Database owner
+    api_gateway_owner:
+      - superuser
+      - createdb
+    # Application user
+    api_gateway_app: []
+
+  databases:
+    api_gateway_db: api_gateway_owner
+
+  postgresql:
+    version: "16"
+    parameters:
+      max_connections: "200"
+      shared_buffers: "128MB"
+      effective_cache_size: "512MB"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+
+  patroni:
+    initdb:
+      encoding: "UTF8"
+      locale: "en_US.UTF-8"
+      data-checksums: "true"
+    # Replica configuration
+    synchronous_mode: false # Async replication for better performance
+    synchronous_mode_strict: false
+    maximum_lag_on_failover: 33554432 # 32MB max lag before failover

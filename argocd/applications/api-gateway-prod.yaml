@@ -17,19 +17,19 @@ spec:
   project: api-gateway
 
   source:
-    repoURL: https://github.com/tu-usuario/infra-k3s # Cambia por tu repo
-    targetRevision: main # Solo main branch para producción
-    path: api-gateway/overlays/production
+    repoURL: https://github.com/your-username/infra-k3s # Change to your repo
+    targetRevision: main # Only main branch for production
+    path: manifests/overlays/production
 
   destination:
     server: https://kubernetes.default.svc
     namespace: production
 
   syncPolicy:
-    # Producción requiere aprobación manual
+    # Production requires manual approval
     automated:
-      prune: false # No eliminar automáticamente en prod
-      selfHeal: false # No auto-corregir en prod
+      prune: false # Don't auto-delete in prod
+      selfHeal: false # Don't auto-correct in prod
     syncOptions:
       - CreateNamespace=true
       - PrunePropagationPolicy=foreground
@@ -42,7 +42,7 @@ spec:
         factor: 2
         maxDuration: 10m
 
-  # Health checks más estrictos para producción
+  # Stricter health checks for production
   ignoreDifferences:
     - group: apps
       kind: Deployment
@@ -50,4 +50,4 @@ spec:
         - /spec/replicas
         - /metadata/annotations/deployment.kubernetes.io~1revision
 
-  revisionHistoryLimit: 20 # Más historia para prod
+  revisionHistoryLimit: 20 # More history for prod
