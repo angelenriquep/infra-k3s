@@ -4,15 +4,13 @@ on:
   push:
     branches: [main, develop]
     paths:
-      - "manifests/**"
+      - "kustomize/**"
       - "argocd/**"
-      - "bootstrap/**"
   pull_request:
     branches: [main]
     paths:
-      - "manifests/**"
+      - "kustomize/**"
       - "argocd/**"
-      - "bootstrap/**"
 
 env:
   REGISTRY: ghcr.io
@@ -35,10 +33,7 @@ jobs:
       - name: Validate Kustomize builds
         run: |
           echo "🔍 Validating development overlay..."
-          kustomize build manifests/overlays/development > /tmp/dev-manifest.yaml
-
-          echo "🔍 Validating production overlay..."
-          kustomize build manifests/overlays/production > /tmp/prod-manifest.yaml
+          kustomize build kustomize/overlays/development > /tmp/dev-manifest.yaml
 
           echo "✅ Kustomize builds successful"
 
@@ -52,7 +47,7 @@ jobs:
       - name: Validate ArgoCD Applications
         run: |
           echo "🔍 Validating ArgoCD applications..."
-          for file in argocd/applications/*.yaml bootstrap/*.yaml; do
+          for file in argocd/applications/*.yaml argocd/bootstrap/*.yaml; do
             if [[ -f "$file" ]]; then
               echo "Validating $file"
               # Basic YAML syntax check
@@ -100,29 +95,19 @@ jobs:
 
       - name: Build development manifests
         run: |
-          mkdir -p manifests/development
-          kustomize build manifests/overlays/development > manifests/development/all.yaml
+          mkdir -p built-manifests/development
+          kustomize build kustomize/overlays/development > built-manifests/development/all.yaml
 
           echo "📊 Development Manifest Stats:"
-          echo "Resources: $(grep -c '^---' manifests/development/all.yaml)"
-          echo "ConfigMaps: $(grep -c 'kind: ConfigMap' manifests/development/all.yaml)"
-          echo "Deployments: $(grep -c 'kind: Deployment' manifests/development/all.yaml)"
-
-      - name: Build production manifests
-        run: |
-          mkdir -p manifests/production
-          kustomize build manifests/overlays/production > manifests/production/all.yaml
-
-          echo "📊 Production Manifest Stats:"
-          echo "Resources: $(grep -c '^---' manifests/production/all.yaml)"
-          echo "ConfigMaps: $(grep -c 'kind: ConfigMap' manifests/production/all.yaml)"
-          echo "Deployments: $(grep -c 'kind: Deployment' manifests/production/all.yaml)"
+          echo "Resources: $(grep -c '^---' built-manifests/development/all.yaml)"
+          echo "ConfigMaps: $(grep -c 'kind: ConfigMap' built-manifests/development/all.yaml)"
+          echo "Deployments: $(grep -c 'kind: Deployment' built-manifests/development/all.yaml)"
 
       - name: Upload manifests as artifacts
         uses: actions/upload-artifact@v4
         with:
           name: kubernetes-manifests
-          path: manifests/
+          path: built-manifests/
           retention-days: 30
 
   # Job 4: Notify ArgoCD (opcional)
@@ -136,7 +121,6 @@ jobs:
         run: |
           echo "🚀 Changes detected in main branch"
           echo "ArgoCD will automatically sync development environment"
-          echo "Production requires manual approval in ArgoCD UI"
 
           # Si tienes ArgoCD CLI configurado, puedes hacer:
           # argocd app sync api-gateway-dev
@@ -161,8 +145,8 @@ jobs:
           npm install -g html-validate
 
           # Validate HTML files
-          if [ -f "manifests/base/frontend/index.html" ]; then
-            html-validate manifests/base/frontend/index.html
+          if [ -f "src/frontend/index.html" ]; then
+            html-validate src/frontend/index.html
             echo "✅ HTML validation passed"
           fi
 
@@ -170,6 +154,6 @@ jobs:
         run: |
           echo "🔍 Validating nginx configuration..."
           # Test nginx config syntax
-          docker run --rm -v "$PWD/manifests/base/frontend/nginx.conf:/etc/nginx/nginx.conf:ro" \
+          docker run --rm -v "$PWD/src/frontend/nginx.conf:/etc/nginx/nginx.conf:ro" \
             nginx:alpine nginx -t
           echo "✅ Nginx config validation passed"

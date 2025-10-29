@@ -1,15 +1,17 @@
-# Kustomization for ArgoCD Applications
+# Kustomization for Development ArgoCD Applications
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - dev
+  - api-gateway-dev.yaml
 
-# Common labels for all ArgoCD applications
+# Common labels for development applications
 commonLabels:
   managed-by: argocd
   component: gitops
+  environment: development
 
 # Common annotations
 commonAnnotations:
   argocd.argoproj.io/managed: "true"
+  argocd.argoproj.io/environment: "development"

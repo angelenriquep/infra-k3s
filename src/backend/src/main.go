@@ -12,6 +12,8 @@ import (
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type APIRequest struct {
@@ -28,6 +30,40 @@ type Response struct {
 }
 
 var db *sql.DB
+
+var (
+	// Métricas de Prometheus
+	httpRequestsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "endpoint", "status"},
+	)
+
+	httpRequestDuration = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "endpoint"},
+	)
+
+	dbConnectionsActive = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "db_connections_active",
+			Help: "Number of active database connections",
+		},
+	)
+)
+
+func init() {
+	// Registrar métricas
+	prometheus.MustRegister(httpRequestsTotal)
+	prometheus.MustRegister(httpRequestDuration)
+	prometheus.MustRegister(dbConnectionsActive)
+}
 
 func main() {
 	// Configure PostgreSQL connection
@@ -64,10 +100,17 @@ func main() {
 
 	// Configurar rutas
 	r := mux.NewRouter()
+
+	// Aplicar middleware de métricas
+	r.Use(prometheusMiddleware)
+
 	r.HandleFunc("/", handleRoot).Methods("GET")
 	r.HandleFunc("/api", handleAPIPost).Methods("POST")
 	r.HandleFunc("/api", handleAPIGet).Methods("GET")
 	r.HandleFunc("/health", handleHealth).Methods("GET")
+
+	// Prometheus metrics endpoint
+	r.Handle("/metrics", promhttp.Handler())
 
 	port := getEnv("PORT", "3000")
 	log.Printf("🚀 Backend Go server starting on port %s", port)
@@ -218,4 +261,31 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// Middleware para métricas
+func prometheusMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+
+		// Wrapper para capturar el status code
+		ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+
+		next.ServeHTTP(ww, r)
+
+		// Registrar métricas
+		duration := time.Since(start).Seconds()
+		httpRequestDuration.WithLabelValues(r.Method, r.URL.Path).Observe(duration)
+		httpRequestsTotal.WithLabelValues(r.Method, r.URL.Path, fmt.Sprintf("%d", ww.statusCode)).Inc()
+	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
 }

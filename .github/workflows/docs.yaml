@@ -82,7 +82,7 @@ jobs:
 
           ### Deploy Applications
           ```bash
-          kubectl apply -f bootstrap/root-app.yaml
+          kubectl apply -f argocd/bootstrap/root-app.yaml
           ```
 
           ## Access URLs

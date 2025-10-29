@@ -9,6 +9,7 @@ spec:
   teamId: "api-gateway"
   volume:
     size: 1Gi
+    # storageClass: local-path  # Use K3s default persistent storage (commented to use default)
   numberOfInstances: 2 # 1 primary + 1 replica
   users:
     # Database owner
@@ -28,6 +29,15 @@ spec:
       shared_buffers: "128MB"
       effective_cache_size: "512MB"
 
+  patroni:
+    initdb:
+      encoding: UTF8
+      locale: en_US.UTF-8
+      data-checksums: "true"
+    maximum_lag_on_failover: 33554432
+    synchronous_mode: false
+    synchronous_mode_strict: false
+
   resources:
     requests:
       cpu: 100m
@@ -35,13 +45,3 @@ spec:
     limits:
       cpu: 500m
       memory: 500Mi
-
-  patroni:
-    initdb:
-      encoding: "UTF8"
-      locale: "en_US.UTF-8"
-      data-checksums: "true"
-    # Replica configuration
-    synchronous_mode: false # Async replication for better performance
-    synchronous_mode_strict: false
-    maximum_lag_on_failover: 33554432 # 32MB max lag before failover

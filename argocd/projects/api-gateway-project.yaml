@@ -1,9 +1,9 @@
-# ArgoCD Project for API Gateway
+# ArgoCD Project for API Gateway - SECURITY BOUNDARY AND ORGANIZATION UNIT
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
-  name: api-gateway
-  namespace: argocd
+  name: api-gateway # Project identifier
+  namespace: argocd # Lives in ArgoCD namespace
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -11,10 +11,10 @@ spec:
 
   # Source repositories
   sourceRepos:
-    - "https://github.com/tu-usuario/infra-k3s" # Cambia por tu repo
-    - "*"
+    - "https://github.com/angelenriquep/infra-k3s"
+    - "*" # Allow all repositories - SECURITY RISK!
 
-  # Destination clusters and namespaces
+  # Destination clusters and namespaces - where the apps can deploy
   destinations:
     - namespace: "development"
       server: https://kubernetes.default.svc
@@ -37,13 +37,13 @@ spec:
   # Namespace resource allow list
   namespaceResourceWhitelist:
     - group: "apps"
-      kind: "*"
+      kind: "*" # All resource types in these groups
     - group: ""
-      kind: "*"
+      kind: "*" # All resource types in these groups
     - group: "gateway.networking.k8s.io"
-      kind: "*"
+      kind: "*" # All resource types in these groups
     - group: "networking.k8s.io"
-      kind: "*"
+      kind: "*" # All resource types in these groups
 
   # Roles for RBAC
   roles:

@@ -1,0 +1,60 @@
+---
+# CloudNativePG Cluster for migration from Zalando
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: api-gateway-postgres-cnpg-v2
+  namespace: default
+spec:
+  instances: 2
+
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "128MB"
+      effective_cache_size: "512MB"
+      max_replication_slots: "10"
+      max_wal_senders: "10"
+      max_logical_replication_workers: "4"
+
+  bootstrap:
+    initdb:
+      database: api_gateway_db
+      owner: api_gateway_owner
+      secret:
+        name: dev-api-gateway-postgres-cnpg-app
+      dataChecksums: true
+      encoding: "UTF8"
+      localeCType: "en_US.UTF-8"
+      localeCollate: "en_US.UTF-8"
+      postInitSQL:
+        - "CREATE USER api_gateway_app WITH PASSWORD 'cnpg_app_pass';"
+        - "GRANT ALL PRIVILEGES ON DATABASE api_gateway_db TO api_gateway_app;"
+        - "GRANT ALL PRIVILEGES ON SCHEMA public TO api_gateway_app;"
+
+  storage:
+    size: 1Gi
+    storageClass: local-path
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 500Mi
+
+  # monitoring:
+  #   enabled: false
+
+---
+# Secret for CNPG cluster app user
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-gateway-postgres-cnpg-app
+  namespace: default
+type: kubernetes.io/basic-auth
+data:
+  username: YXBpX2dhdGV3YXlfb3duZXI= # api_gateway_owner
+  password: Y25wZ19wYXNzd29yZA== # cnpg_password

@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Base resources
+resources:
+  - backend/backend-api.yaml
+  - frontend/frontend-deployment-service.yaml
+  - cluster/envoy-gateway/gateway-infrastructure.yaml
+  - cluster/envoy-gateway/httproutes.yaml
+  - cluster/envoy-gateway/nodeport-gateway.yaml
+  - cluster/monitoring/grafana.yaml
+  - cluster/monitoring/prometheus.yaml
+  - cluster/pgoperator/postgres-operator.yaml
+  - cluster/pgoperator/postgres-cluster.yaml
+
+# Generated resources
+# configMapGenerator:
+#   - name: frontend-html
+#     files:
+#       - ../src/frontend/index.html
+#       - ../src/frontend/nginx.conf
+
+# Common labels for all resources
+commonLabels:
+  project: api-gateway
+  component: web
+
+# Common annotations
+commonAnnotations:
+  managed-by: kustomize

@@ -1,5 +1,6 @@
 # Bootstrap Application - App of Apps Pattern
 # This application deploys all other applications
+# SINGLE ENTRY POINT for ArgoCD to manage your GitOps setup
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -8,7 +9,7 @@ metadata:
   labels:
     name: bootstrap
   annotations:
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "0" # All resource types in these groups
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
@@ -16,7 +17,7 @@ spec:
 
   source:
     repoURL: https://github.com/angelenriquep/infra-k3s
-    targetRevision: main
+    targetRevision: master
     path: argocd/applications
 
   destination:

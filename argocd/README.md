@@ -33,7 +33,7 @@ kubectl apply -f argocd/projects/api-gateway-project.yaml
 ### 5. Deploy the bootstrap application (App of Apps)
 
 ```bash
-kubectl apply -f bootstrap/root-app.yaml
+kubectl apply -f argocd/bootstrap/root-app.yaml
 ```
 
 ### 6. Verify in ArgoCD UI
@@ -73,7 +73,7 @@ infra-k3s/
 │   │   └── api-gateway-prod.yaml
 │   └── projects/
 │       └── api-gateway-project.yaml
-├── bootstrap/                ← App of Apps
+│   ├── bootstrap/            ← App of Apps
 │   └── root-app.yaml
 ├── backend/                  ← Backend Go application
 │   ├── Dockerfile

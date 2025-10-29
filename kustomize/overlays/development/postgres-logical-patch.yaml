@@ -1,0 +1,21 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: api-gateway-postgres
+spec:
+  postgresql:
+    parameters:
+      wal_level: "logical"
+      max_logical_replication_workers: "4"
+      max_replication_slots: "10"
+      max_wal_senders: "10"
+  patroni:
+    pg_hba:
+      - "local all all trust"
+      - "host all all 127.0.0.1/32 md5"
+      - "host all all ::1/128 md5"
+      - "host all all 10.42.0.0/16 md5"
+      - "host replication api_gateway_owner 10.42.0.0/16 md5"
+      - "host replication streaming_replica 10.42.0.0/16 md5"
+      - "local replication standby trust"
+      - "host replication standby all md5"

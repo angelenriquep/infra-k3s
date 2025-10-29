@@ -15,13 +15,13 @@ spec:
   project: api-gateway
 
   source:
-    repoURL: https://github.com/your-username/infra-k3s # Change to your repo
-    targetRevision: main # o develop branch para dev
-    path: manifests/overlays/development
+    repoURL: https://github.com/angelenriquep/infra-k3s
+    targetRevision: master
+    path: kustomize/overlays/development
 
   destination:
     server: https://kubernetes.default.svc
-    namespace: development
+    namespace: default
 
   syncPolicy:
     automated:

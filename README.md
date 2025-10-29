@@ -4,15 +4,16 @@
 
 ```
 infra-k3s/
-├── manifests/                ← Kubernetes manifests
-│   ├── base/
-│   │   ├── kustomization.yaml
-│   │   ├── backend-api.yaml
-│   │   ├── frontend-deployment-service.yaml
-│   │   ├── gateway-infrastructure.yaml
-│   │   ├── httproutes.yaml
-│   │   ├── nodeport-gateway.yaml
-│   │   └── frontend/
+├── base/                     ← Base Kubernetes manifests
+│   ├── kustomization.yaml
+│   ├── backend/
+│   │   └── backend-api.yaml
+│   ├── frontend/
+│   │   └── frontend-deployment-service.yaml
+│   └── cluster/
+│       ├── envoy-gateway/
+│       ├── monitoring/
+│       └── pgoperator/
 │   │       ├── index.html
 │   │       └── nginx.conf
 │   └── overlays/
@@ -32,7 +33,7 @@ infra-k3s/
 │   │   └── api-gateway-prod.yaml
 │   └── projects/
 │       └── api-gateway-project.yaml
-├── bootstrap/                ← App of Apps
+│   ├── bootstrap/            ← App of Apps
 │   └── root-app.yaml
 └── README.md
 ```
@@ -68,7 +69,7 @@ kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.pas
 kubectl apply -f argocd/projects/api-gateway-project.yaml
 
 # Deploy bootstrap (App of Apps)
-kubectl apply -f bootstrap/root-app.yaml
+kubectl apply -f argocd/bootstrap/root-app.yaml
 ```
 
 ## Workflow GitOps
@@ -139,11 +140,59 @@ After uploading the new image, update the version in the deployment:
 ```bash
 # Edit backend-api.yaml to change image version
 # Then apply changes
-cd manifests/base
-kubectl apply -f backend-api.yaml
+cd kustomize/base
+kubectl apply -f backend/backend-api.yaml
 
 # O usar kustomize
-kubectl apply -k overlays/development
+kubectl apply -k kustomize/overlays/development
+```
+
+## 📊 Observability Stack
+
+### Monitoring Components
+
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Dashboards and visualization
+- **Fluent Bit**: Log aggregation and forwarding
+
+### Access URLs
+
+```bash
+# Prometheus
+http://192.168.88.243:30090
+
+# Grafana
+http://192.168.88.243:31104
+# User: admin
+# Password: admin123
+```
+
+### Recommended Grafana Dashboards
+
+Import these dashboards using their IDs in Grafana:
+
+| Dashboard | ID | Description |
+|-----------|----|-----------| 
+| **Kubernetes Cluster Monitoring** | `7249` | Complete cluster overview with pods, deployments, resources |
+| **Node Exporter Full** | `1860` | Server metrics (CPU, memory, disk, network) |
+| **PostgreSQL Database** | `9628` | Database performance and connection metrics |
+| **Kubernetes cluster monitoring** | `315` | Alternative cluster monitoring (simpler) |
+
+#### How to import
+
+1. Go to Grafana → **+** → **Import**
+2. Enter dashboard ID (e.g., `7249`)
+3. Click **Load**
+4. Select **Prometheus** as data source
+5. Click **Import**
+
+### Monitoring Stack Deployment
+
+```bash
+# Deploy monitoring stack
+kubectl apply -f monitoring/prometheus.yaml
+kubectl apply -f monitoring/grafana.yaml
+kubectl apply -f monitoring/logging.yaml
 ```
 
 ## Configuration

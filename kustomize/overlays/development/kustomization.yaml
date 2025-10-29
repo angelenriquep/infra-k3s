@@ -12,6 +12,9 @@ namePrefix: dev-
 patchesStrategicMerge:
   - replica-patch.yaml
   - resource-patch.yaml
+  - nodeport-patch.yaml
+  - backend-patch.yaml
+  - postgres-logical-patch.yaml
 
 # Development-specific ConfigMaps
 configMapGenerator:
@@ -20,4 +23,4 @@ configMapGenerator:
       - ENVIRONMENT=development
       - DEBUG=true
       - LOG_LEVEL=debug
-      - API_BASE_URL=http://192.168.88.243:30080
+      - API_BASE_URL=http://192.168.88.243:30081

@@ -64,7 +64,7 @@ deploy-prod: build ## Deploy to production environment
 deploy-argocd: ## Deploy ArgoCD applications
 	@echo "$(YELLOW)Deploying ArgoCD applications...$(NC)"
 	@kubectl apply -f argocd/projects/api-gateway-project.yaml
-	@kubectl apply -f bootstrap/root-app.yaml
+	@kubectl apply -f argocd/bootstrap/root-app.yaml
 	@echo "$(GREEN)ArgoCD applications deployed!$(NC)"
 
 clean: ## Clean up deployments
