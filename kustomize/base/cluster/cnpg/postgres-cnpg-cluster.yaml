@@ -17,24 +17,6 @@ spec:
       max_logical_replication_workers: "4"
       shared_preload_libraries: ""
 
-  bootstrap:
-    pg_basebackup:
-      source: zalando-source
-      database: postgres
-      owner: postgres
-
-  externalClusters:
-    - name: zalando-source
-      connectionParameters:
-        host: dev-api-gateway-postgres.default.svc.cluster.local
-        port: "5432"
-        user: streaming_replica
-        dbname: postgres
-        sslmode: require
-      password:
-        name: zalando-replica-credentials
-        key: password
-
   storage:
     size: 1Gi
     storageClass: local-path
@@ -46,25 +28,3 @@ spec:
     limits:
       cpu: 500m
       memory: 500Mi
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: zalando-replica-credentials
-  namespace: default
-type: kubernetes.io/basic-auth
-data:
-  username: c3RyZWFtaW5nX3JlcGxpY2E= # streaming_replica
-  password: cmVwbGljYXRpb25fcGFzc3dvcmQxMjM= # replication_password123
-
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: app-user-credentials
-  namespace: default
-type: kubernetes.io/basic-auth
-data:
-  username: YXBwX3VzZXI= # app_user
-  password: YXBwX3Bhc3N3b3Jk # app_password

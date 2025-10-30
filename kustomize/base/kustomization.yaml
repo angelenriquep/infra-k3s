@@ -10,8 +10,8 @@ resources:
   - cluster/envoy-gateway/nodeport-gateway.yaml
   - cluster/monitoring/grafana.yaml
   - cluster/monitoring/prometheus.yaml
-  - cluster/pgoperator/postgres-operator.yaml
-  - cluster/pgoperator/postgres-cluster.yaml
+  - cluster/cnpg/postgres-cnpg-cluster.yaml
+  - cluster/cnpg/cnpg-app-secret.yaml
 
 # Generated resources
 # configMapGenerator:

@@ -42,7 +42,7 @@ spec:
             - name: ENVIRONMENT
               value: "kubernetes"
             - name: DB_HOST
-              value: "api-gateway-postgres.default.svc.cluster.local"
+              value: "migration-target-rw.default.svc.cluster.local"
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
@@ -52,7 +52,7 @@ spec:
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: api-gateway-app.api-gateway-postgres.credentials.postgresql.acid.zalan.do
+                  name: cnpg-app-credentials
                   key: password
             - name: DB_SSLMODE
               value: "require"
@@ -69,12 +69,14 @@ spec:
               port: 3000
             initialDelaySeconds: 30
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             httpGet:
               path: /health
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 5
+            timeoutSeconds: 5
 ---
 # Service for backend
 apiVersion: v1
