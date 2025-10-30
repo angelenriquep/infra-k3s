@@ -1,12 +1,11 @@
 ---
-# CloudNativePG Cluster for migration from Zalando
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: api-gateway-postgres-cnpg-v2
+  name: migration-target
   namespace: default
 spec:
-  instances: 2
+  instances: 1
 
   postgresql:
     parameters:
@@ -16,21 +15,25 @@ spec:
       max_replication_slots: "10"
       max_wal_senders: "10"
       max_logical_replication_workers: "4"
+      shared_preload_libraries: ""
 
   bootstrap:
-    initdb:
-      database: api_gateway_db
-      owner: api_gateway_owner
-      secret:
-        name: dev-api-gateway-postgres-cnpg-app
-      dataChecksums: true
-      encoding: "UTF8"
-      localeCType: "en_US.UTF-8"
-      localeCollate: "en_US.UTF-8"
-      postInitSQL:
-        - "CREATE USER api_gateway_app WITH PASSWORD 'cnpg_app_pass';"
-        - "GRANT ALL PRIVILEGES ON DATABASE api_gateway_db TO api_gateway_app;"
-        - "GRANT ALL PRIVILEGES ON SCHEMA public TO api_gateway_app;"
+    pg_basebackup:
+      source: zalando-source
+      database: postgres
+      owner: postgres
+
+  externalClusters:
+    - name: zalando-source
+      connectionParameters:
+        host: dev-api-gateway-postgres.default.svc.cluster.local
+        port: "5432"
+        user: streaming_replica
+        dbname: postgres
+        sslmode: require
+      password:
+        name: zalando-replica-credentials
+        key: password
 
   storage:
     size: 1Gi
@@ -44,17 +47,24 @@ spec:
       cpu: 500m
       memory: 500Mi
 
-  # monitoring:
-  #   enabled: false
-
 ---
-# Secret for CNPG cluster app user
 apiVersion: v1
 kind: Secret
 metadata:
-  name: api-gateway-postgres-cnpg-app
+  name: zalando-replica-credentials
   namespace: default
 type: kubernetes.io/basic-auth
 data:
-  username: YXBpX2dhdGV3YXlfb3duZXI= # api_gateway_owner
-  password: Y25wZ19wYXNzd29yZA== # cnpg_password
+  username: c3RyZWFtaW5nX3JlcGxpY2E= # streaming_replica
+  password: cmVwbGljYXRpb25fcGFzc3dvcmQxMjM= # replication_password123
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-user-credentials
+  namespace: default
+type: kubernetes.io/basic-auth
+data:
+  username: YXBwX3VzZXI= # app_user
+  password: YXBwX3Bhc3N3b3Jk # app_password
