@@ -15,17 +15,11 @@ spec:
         app: frontend
     spec:
       containers:
-        - name: nginx
-          image: nginx:alpine
+        - name: frontend
+          image: mockingbird2912/api-gateway-frontend:latest
           ports:
             - containerPort: 80
               name: http
-          volumeMounts:
-            - name: html
-              mountPath: /usr/share/nginx/html
-            - name: nginx-config
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
           resources:
             requests:
               cpu: 50m
@@ -33,19 +27,6 @@ spec:
             limits:
               cpu: 100m
               memory: 128Mi
-      volumes:
-        - name: html
-          configMap:
-            name: frontend-html
-            items:
-              - key: index.html
-                path: index.html
-        - name: nginx-config
-          configMap:
-            name: frontend-html
-            items:
-              - key: nginx.conf
-                path: nginx.conf
 ---
 apiVersion: v1
 kind: Service

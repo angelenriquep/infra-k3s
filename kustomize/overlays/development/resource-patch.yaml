@@ -7,7 +7,7 @@ spec:
   template:
     spec:
       containers:
-        - name: nginx
+        - name: frontend
           resources:
             requests:
               cpu: 10m

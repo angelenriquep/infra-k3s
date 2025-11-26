@@ -10,9 +10,9 @@ spec:
         - name: backend
           env:
             - name: DB_HOST
-              value: "dev-api-gateway-postgres.default.svc.cluster.local"
+              value: "migration-target-rw.default.svc.cluster.local"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: api-gateway-app.dev-api-gateway-postgres.credentials.postgresql.acid.zalan.do
+                  name: cnpg-app-credentials
                   key: password

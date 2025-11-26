@@ -93,6 +93,43 @@
       color: #007cba;
       font-style: italic;
     }
+
+    input {
+      padding: 5px 8px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+      font-size: 14px;
+    }
+
+    label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .metrics-result {
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+    }
+
+    .full-test {
+      background: #e8f5e8;
+      border-color: #28a745;
+    }
+
+    .full-test button {
+      background: #28a745;
+      font-weight: bold;
+    }
+
+    .full-test button:hover {
+      background: #218838;
+    }
+
+    small {
+      opacity: 0.7;
+    }
   </style>
 </head>
 
@@ -101,27 +138,53 @@
     <h1>🚀 API Gateway Testing Frontend</h1>
 
     <div class="endpoint">
-      <h3>Simple Route</h3>
-      <p>Tests the basic backend route without any special headers.</p>
-      <button onclick="testSimple()">Test GET /</button>
-      <div id="simple-status"></div>
-      <pre id="simple-result"></pre>
+      <h3>Backend Info</h3>
+      <p>Gets basic information about the backend service and database connection.</p>
+      <button onclick="testRoot()">Test GET /</button>
+      <div id="root-status"></div>
+      <pre id="root-result"></pre>
     </div>
 
     <div class="endpoint">
-      <h3>Hostname Route</h3>
-      <p>Tests the hostname-specific route that requires the <code>Host: www.example.com</code> header.</p>
-      <button onclick="testHostname()">Test GET /api/ (with Host header)</button>
-      <div id="hostname-status"></div>
-      <pre id="hostname-result"></pre>
+      <h3>Health Check</h3>
+      <p>Checks if the backend service and database are healthy.</p>
+      <button onclick="testHealth()">Test GET /health</button>
+      <div id="health-status"></div>
+      <pre id="health-result"></pre>
     </div>
 
     <div class="endpoint">
-      <h3>POST Test</h3>
-      <p>Tests POST requests with JSON data to the backend.</p>
-      <button onclick="testPost()">Test POST with data</button>
-      <div id="post-status"></div>
-      <pre id="post-result"></pre>
+      <h3>Log API Request</h3>
+      <p>Logs a new request to the PostgreSQL database with client IP and user agent.</p>
+      <button onclick="testLogRequest()">Test POST /api</button>
+      <div id="log-status"></div>
+      <pre id="log-result"></pre>
+    </div>
+
+    <div class="endpoint">
+      <h3>Get API Requests</h3>
+      <p>Retrieves recent API requests from the database.</p>
+      <label for="limit-input">Limit: </label>
+      <input type="number" id="limit-input" value="10" min="1" max="100" style="width: 60px; margin-right: 10px;">
+      <button onclick="testGetRequests()">Test GET /api</button>
+      <div id="get-status"></div>
+      <pre id="get-result"></pre>
+    </div>
+
+    <div class="endpoint">
+      <h3>Prometheus Metrics</h3>
+      <p>View Prometheus metrics from the backend service.</p>
+      <button onclick="testMetrics()">Test GET /metrics</button>
+      <div id="metrics-status"></div>
+      <pre id="metrics-result" class="metrics-result"></pre>
+    </div>
+
+    <div class="endpoint full-test">
+      <h3>Full Test Suite</h3>
+      <p>Run all tests in sequence to verify complete functionality.</p>
+      <button onclick="runFullTest()">🚀 Run All Tests</button>
+      <div id="full-status"></div>
+      <pre id="full-result"></pre>
     </div>
   </div>
 
@@ -144,69 +207,166 @@
       buttonElement.disabled = false;
     }
 
-    async function testSimple() {
+    async function testRoot() {
       const button = event.target;
-      setLoading('simple-status', 'simple-result', button);
+      setLoading('root-status', 'root-result', button);
 
       try {
         const response = await fetch(API_BASE + '/');
         const data = await response.json();
 
-        setStatus('simple-status', 'success', `✅ Success (${response.status})`);
-        document.getElementById('simple-result').textContent = JSON.stringify(data, null, 2);
+        setStatus('root-status', 'success', `✅ Success (${response.status})`);
+        document.getElementById('root-result').textContent = JSON.stringify(data, null, 2);
       } catch (error) {
-        setStatus('simple-status', 'error', `❌ Error: ${error.message}`);
-        document.getElementById('simple-result').textContent = error.toString();
+        setStatus('root-status', 'error', `❌ Error: ${error.message}`);
+        document.getElementById('root-result').textContent = error.toString();
       } finally {
         resetButton(button);
       }
     }
 
-    async function testHostname() {
+    async function testHealth() {
       const button = event.target;
-      setLoading('hostname-status', 'hostname-result', button);
+      setLoading('health-status', 'health-result', button);
 
       try {
-        const response = await fetch(API_BASE + '/api/', {
-          headers: {
-            'Host': 'www.example.com'
-          }
-        });
+        const response = await fetch(API_BASE + '/health');
         const data = await response.json();
 
-        setStatus('hostname-status', 'success', `✅ Success (${response.status})`);
-        document.getElementById('hostname-result').textContent = JSON.stringify(data, null, 2);
+        const status = data.status === 'healthy' ? 'success' : 'error';
+        setStatus('health-status', status, `${status === 'success' ? '✅' : '❌'} ${data.status} (${response.status})`);
+        document.getElementById('health-result').textContent = JSON.stringify(data, null, 2);
       } catch (error) {
-        setStatus('hostname-status', 'error', `❌ Error: ${error.message}`);
-        document.getElementById('hostname-result').textContent = error.toString();
+        setStatus('health-status', 'error', `❌ Error: ${error.message}`);
+        document.getElementById('health-result').textContent = error.toString();
       } finally {
         resetButton(button);
       }
     }
 
-    async function testPost() {
+    async function testLogRequest() {
       const button = event.target;
-      setLoading('post-status', 'post-result', button);
+      setLoading('log-status', 'log-result', button);
 
       try {
-        const response = await fetch(API_BASE + '/', {
+        const response = await fetch(API_BASE + '/api', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            message: 'Hello from frontend!',
-            timestamp: new Date().toISOString(),
-            userAgent: navigator.userAgent
-          })
+          // No body needed - the backend extracts IP and User-Agent from headers
         });
         const data = await response.json();
 
-        setStatus('post-status', 'success', `✅ Success (${response.status})`);
-        document.getElementById('post-result').textContent = JSON.stringify(data, null, 2);
+        setStatus('log-status', 'success', `✅ Success (${response.status})`);
+        document.getElementById('log-result').textContent = JSON.stringify(data, null, 2);
       } catch (error) {
-        setStatus('post-status', 'error', `❌ Error: ${error.message}`);
-        document.getElementById('post-result').textContent = error.toString();
+        setStatus('log-status', 'error', `❌ Error: ${error.message}`);
+        document.getElementById('log-result').textContent = error.toString();
+      } finally {
+        resetButton(button);
+      }
+    }
+
+    async function testGetRequests() {
+      const button = event.target;
+      setLoading('get-status', 'get-result', button);
+
+      try {
+        const limit = document.getElementById('limit-input').value || '10';
+        const response = await fetch(API_BASE + `/api?limit=${limit}`);
+        const data = await response.json();
+
+        setStatus('get-status', 'success', `✅ Success (${response.status})`);
+        document.getElementById('get-result').textContent = JSON.stringify(data, null, 2);
+      } catch (error) {
+        setStatus('get-status', 'error', `❌ Error: ${error.message}`);
+        document.getElementById('get-result').textContent = error.toString();
+      } finally {
+        resetButton(button);
+      }
+    }
+
+    async function testMetrics() {
+      const button = event.target;
+      setLoading('metrics-status', 'metrics-result', button);
+
+      try {
+        const response = await fetch(API_BASE + '/metrics');
+        const data = await response.text(); // Metrics are plain text, not JSON
+
+        setStatus('metrics-status', 'success', `✅ Success (${response.status})`);
+        // Limit output to first 2000 characters to avoid overwhelming the UI
+        const limitedData = data.length > 2000 ? data.substring(0, 2000) + '\n... (truncated)' : data;
+        document.getElementById('metrics-result').textContent = limitedData;
+      } catch (error) {
+        setStatus('metrics-status', 'error', `❌ Error: ${error.message}`);
+        document.getElementById('metrics-result').textContent = error.toString();
+      } finally {
+        resetButton(button);
+      }
+    }
+
+    async function runFullTest() {
+      const button = event.target;
+      setLoading('full-status', 'full-result', button);
+
+      const results = [];
+      const tests = [
+        { name: 'Backend Info', func: () => fetch(API_BASE + '/') },
+        { name: 'Health Check', func: () => fetch(API_BASE + '/health') },
+        { name: 'Log Request', func: () => fetch(API_BASE + '/api', { method: 'POST' }) },
+        { name: 'Get Requests', func: () => fetch(API_BASE + '/api?limit=5') },
+        { name: 'Metrics', func: () => fetch(API_BASE + '/metrics') }
+      ];
+
+      try {
+        for (const test of tests) {
+          try {
+            const startTime = Date.now();
+            const response = await test.func();
+            const endTime = Date.now();
+            const duration = endTime - startTime;
+
+            results.push({
+              test: test.name,
+              status: response.status,
+              success: response.ok,
+              duration: `${duration}ms`,
+              size: response.headers.get('content-length') || 'unknown'
+            });
+          } catch (error) {
+            results.push({
+              test: test.name,
+              status: 'ERROR',
+              success: false,
+              error: error.message,
+              duration: '0ms'
+            });
+          }
+        }
+
+        const successCount = results.filter(r => r.success).length;
+        const totalCount = results.length;
+
+        if (successCount === totalCount) {
+          setStatus('full-status', 'success', `✅ All ${totalCount} tests passed!`);
+        } else {
+          setStatus('full-status', 'error', `❌ ${successCount}/${totalCount} tests passed`);
+        }
+
+        document.getElementById('full-result').textContent = JSON.stringify({
+          summary: {
+            total: totalCount,
+            passed: successCount,
+            failed: totalCount - successCount
+          },
+          results: results
+        }, null, 2);
+
+      } catch (error) {
+        setStatus('full-status', 'error', `❌ Test suite error: ${error.message}`);
+        document.getElementById('full-result').textContent = error.toString();
       } finally {
         resetButton(button);
       }
@@ -214,7 +374,11 @@
 
     // Auto-test on page load for demonstration
     document.addEventListener('DOMContentLoaded', function () {
-      console.log('API Gateway Frontend loaded successfully!');
+      console.log('🚀 API Gateway Frontend loaded successfully!');
+      console.log('Backend API URL:', API_BASE);
+
+      // Show current API base URL in the title
+      document.querySelector('h1').innerHTML += `<br><small style="font-size: 0.6em; color: #666;">API: ${API_BASE}</small>`;
     });
   </script>
 </body>

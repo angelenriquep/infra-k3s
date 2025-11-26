@@ -46,11 +46,14 @@
                         │ ✅ Match: PathPrefix "/" │
                         │ 🎯 Route to: backend    │
                         └─────────────────────────┘
-                                    │
-                          Forward to backend service
-                          Source: 10.42.0.14
-                          Dest: backend:3000
-                                    │
+                                    │ ┌─────────────────────────────────────┐
+                          Forward to backend service    │ 🔄 gRPC Control Connection        │
+                          Source: 10.42.0.14          │ Envoy ←→ Envoy Gateway            │
+                          Dest: backend:3000           │ Source: 10.42.0.14               │
+                                    │                  │ Dest: 10.42.0.11:18000 (EG Pod)  │
+                                                      │ Protocol: xDS/gRPC                │
+                                                      │ Updates: Routes, Clusters, etc    │
+                                                      └─────────────────────────────────────┘
                                     ▼
                         ┌─────────────────────────┐
                         │ 🎯 BACKEND SERVICE      │
@@ -74,6 +77,77 @@
                         │ 📤 Returns JSON         │
                         └─────────────────────────┘
 ```
+
+## 🎛️ Envoy Gateway Control Plane Connection
+
+### 📡 gRPC xDS Connection - What "Control Plane Manages gRPC" Means
+
+The diagram above shows the data plane traffic flow, but there's also a critical **control plane connection**:
+
+```text
+┌─────────────────────────┐       gRPC xDS API        ┌─────────────────────────┐
+│ 🚪 ENVOY PROXY POD      │◄────────────────────────►│ 🎛️ ENVOY GATEWAY POD    │
+│ Pod IP: 10.42.0.6       │                          │ Pod IP: 10.42.0.5       │
+│ Port: 10080 (data)      │   Discovery Requests:    │ Port: 18000 (xDS gRPC)  │
+│                         │   • RouteConfiguration    │ Port: 18001 (rate limit)│
+│ 📋 Configuration:       │   • ClusterLoadAssignment│ Port: 18002 (ext auth)  │
+│ ✅ Routes from HTTPRoute│   • Listener updates      │                         │
+│ ✅ Backend clusters     │   • Endpoint discovery    │ 🔧 Control Functions:   │
+│ ✅ Load balancing       │                          │ ✅ HTTPRoute processing │
+└─────────────────────────┘                          │ ✅ Gateway management   │
+                                                     │ ✅ Certificate handling │
+                                                     └─────────────────────────┘
+```
+
+### 🤔 What Does "Control Plane Manages gRPC" Mean?
+
+**It means the Envoy Gateway control plane:**
+
+1. **Runs a gRPC Server** (port 18000) that serves Envoy's xDS (Discovery Service) APIs
+2. **Translates Kubernetes Resources** into Envoy configuration 
+3. **Pushes Configuration** to Envoy Proxy pods via gRPC
+4. **Manages the gRPC Connection State** between itself and all Envoy proxies
+
+**It does NOT mean:**
+- ❌ It manages your application's gRPC traffic (that would be data plane)
+- ❌ It's a gRPC proxy for your services
+- ❌ It handles gRPC load balancing for your apps
+
+### 🔄 Control Plane Flow - Step by Step
+
+1. **Envoy Gateway watches Kubernetes APIs** 📡
+   - Gateway objects (listeners, ports, TLS)
+   - HTTPRoute objects (routing rules, matches)  
+   - Service objects (backend endpoints, health)
+
+2. **Translation** 🔄
+   - HTTPRoute → Envoy RouteConfiguration  
+   - Service → Envoy Cluster + Endpoints
+   - Gateway → Envoy Listener
+
+3. **gRPC xDS Server (Port 18000)** 📤
+   - LDS (Listener Discovery Service)
+   - RDS (Route Discovery Service)  
+   - CDS (Cluster Discovery Service)
+   - EDS (Endpoint Discovery Service)
+
+4. **Config Push & ACK** ⚡
+   - Envoy Proxy: "Give me routes for gateway 'eg'"
+   - Gateway: "Here's RouteConfiguration with backend:3000"
+   - Proxy: "ACK - configuration applied"
+
+### 🚨 When Control Plane Fails
+- ❌ No config updates → Routes don't work
+- ❌ Pod `1/2` Ready → No service endpoints  
+- ❌ External traffic fails → Connection timeout
+
+### 🚨 Control Plane Issues (What We Just Fixed)
+
+**Problem**: `gRPC config stream to xds_cluster closed: Connection refused`
+
+**Impact**: Pod `1/2` Ready → No endpoints → External access broken
+
+**Solution**: Restart Envoy Proxy pod to re-establish gRPC connection
 
 ## 🔍 Transformaciones de IP en Cada Paso
 

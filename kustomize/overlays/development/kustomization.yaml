@@ -12,7 +12,6 @@ namePrefix: dev-
 patchesStrategicMerge:
   - replica-patch.yaml
   - resource-patch.yaml
-  - nodeport-patch.yaml
   - backend-patch.yaml
 
 # Development-specific ConfigMaps
