@@ -9,8 +9,12 @@ resources:
   - cluster/envoy-gateway/httproutes.yaml
   - cluster/monitoring/grafana.yaml
   - cluster/monitoring/prometheus.yaml
+  - cluster/minio/minio-deployment.yaml
+  - cluster/minio/minio-init-job.yaml
   - cluster/cnpg/postgres-cnpg-cluster.yaml
   - cluster/cnpg/cnpg-app-secret.yaml
+  - cluster/cnpg/minio-backup-secret.yaml
+  - cluster/cnpg/scheduled-backup.yaml
 
 # Generated resources
 # configMapGenerator:

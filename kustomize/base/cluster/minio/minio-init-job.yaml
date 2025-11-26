@@ -1,0 +1,25 @@
+# This pod initializes MinIO by creating the 'postgresql-backups' bucket
+# It runs once and uses the MinIO client (mc) to set up the storage for CNPG
+# backups
+# kubectl port-forward -n minio svc/minio 9001:9001
+apiVersion: v1
+kind: Pod
+metadata:
+  name: minio-init
+  namespace: minio
+spec:
+  restartPolicy: Never
+  containers:
+    - name: mc
+      image: minio/mc:latest
+      command:
+        - /bin/sh
+        - -c
+        - |
+          mc alias set myminio http://minio.minio.svc.cluster.local:9000 admin minio123456
+          mc mb myminio/postgresql-backups --ignore-existing
+          mc ilm add --expiry-days 7 myminio/postgresql-backups
+          echo "Bucket created successfully"
+      env:
+        - name: MC_HOST_myminio
+          value: "http://admin:minio123456@minio.minio.svc.cluster.local:9000"
