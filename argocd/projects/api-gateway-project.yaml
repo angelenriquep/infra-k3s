@@ -7,7 +7,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  description: API Gateway project with Envoy Gateway, Backend and Frontend
+  description: API Gateway project with Envoy Gateway, Backend and MinIO
 
   # Source repositories
   sourceRepos:
@@ -23,6 +23,8 @@ spec:
     - namespace: "envoy-gateway-system"
       server: https://kubernetes.default.svc
     - namespace: "default"
+      server: https://kubernetes.default.svc
+    - namespace: "minio"
       server: https://kubernetes.default.svc
 
   # Cluster resource allow list
