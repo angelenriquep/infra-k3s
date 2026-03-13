@@ -1,33 +1,10 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Base resources (internal - with commonLabels)
 resources:
-  - backend/backend-api.yaml
-  - frontend/frontend-deployment-service.yaml
-  - cluster/envoy-gateway/gateway-infrastructure.yaml
-  - cluster/envoy-gateway/httproutes.yaml
-  - cluster/monitoring/grafana.yaml
-  - cluster/monitoring/prometheus.yaml
-  - cluster/minio/minio-deployment.yaml
-  - cluster/minio/minio-init-job.yaml
-  - cluster/cnpg/postgres-cnpg-cluster.yaml
-  - cluster/cnpg/cnpg-app-secret.yaml
-  - cluster/cnpg/minio-backup-secret.yaml
-  - cluster/cnpg/scheduled-backup.yaml
+    - backend/backend-api.yaml
+    - cluster/minio/minio-deployment.yaml
+    - cluster/minio/minio-init-job.yaml
 
-# Generated resources
-# configMapGenerator:
-#   - name: frontend-html
-#     files:
-#       - ../src/frontend/index.html
-#       - ../src/frontend/nginx.conf
-
-# Common labels for all resources
-commonLabels:
-  project: api-gateway
-  component: web
-
-# Common annotations
 commonAnnotations:
-  managed-by: kustomize
+    managed-by: kustomize

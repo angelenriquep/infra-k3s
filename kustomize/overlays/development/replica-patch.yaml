@@ -1,14 +1,7 @@
-# Development: Single replica for faster startup
+# Development: Single replica
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: frontend
+    name: backend
 spec:
-  replicas: 1
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: backend
-spec:
-  replicas: 1
+    replicas: 1

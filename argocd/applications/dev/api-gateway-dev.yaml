@@ -2,49 +2,49 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: api-gateway-dev
-  namespace: argocd
-  labels:
-    environment: development
-    project: api-gateway
-  annotations:
-    argocd.argoproj.io/sync-wave: "1"
-  finalizers:
-    - resources-finalizer.argocd.argoproj.io
+    name: api-gateway-dev
+    namespace: argocd
+    labels:
+        environment: development
+        project: api-gateway
+    annotations:
+        argocd.argoproj.io/sync-wave: "1"
+    finalizers:
+        - resources-finalizer.argocd.argoproj.io
 spec:
-  project: api-gateway
+    project: api-gateway
 
-  source:
-    repoURL: https://github.com/angelenriquep/infra-k3s
-    targetRevision: master
-    path: kustomize/overlays/development
+    source:
+        repoURL: https://github.com/angelenriquep/infra-k3s
+        targetRevision: master
+        path: kustomize/overlays/development
 
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: default
+    destination:
+        server: https://kubernetes.default.svc
+        namespace: default
 
-  syncPolicy:
-    automated:
-      prune: true # Delete resources no longer in Git
-      selfHeal: true # Auto-correct cluster drift
-      allowEmpty: false
-    syncOptions:
-      - CreateNamespace=true # Create namespace if not exists
-      - PrunePropagationPolicy=foreground
-      - PruneLast=true
-    retry:
-      limit: 3
-      backoff:
-        duration: 5s
-        factor: 2
-        maxDuration: 3m
+    syncPolicy:
+        automated:
+            prune: true # Delete resources no longer in Git
+            selfHeal: true # Auto-correct cluster drift
+            allowEmpty: false
+        syncOptions:
+            - CreateNamespace=true # Create namespace if not exists
+            - PrunePropagationPolicy=foreground
+            - PruneLast=true
+        retry:
+            limit: 3
+            backoff:
+                duration: 5s
+                factor: 2
+                maxDuration: 3m
 
-  # Health checks personalizados
-  ignoreDifferences:
-    - group: apps
-      kind: Deployment
-      jsonPointers:
-        - /spec/replicas # Ignore manual replica changes (HPA)
+    # Health checks personalizados
+    ignoreDifferences:
+        - group: apps
+          kind: Deployment
+          jsonPointers:
+              - /spec/replicas # Ignore manual replica changes (HPA)
 
-  # Notificaciones y hooks
-  revisionHistoryLimit: 10
+    # Notificaciones y hooks
+    revisionHistoryLimit: 10
