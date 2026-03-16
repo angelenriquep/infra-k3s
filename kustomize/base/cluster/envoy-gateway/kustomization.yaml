@@ -4,4 +4,4 @@ kind: Kustomization
 resources:
     - gateway-infrastructure.yaml
     - httproutes.yaml
-    - nodeport-gateway.yaml
+    - lb-gateway.yaml
