@@ -2,46 +2,46 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-    name: api-gateway
-    namespace: argocd
-    labels:
-        project: api-gateway
-    annotations:
-        argocd.argoproj.io/sync-wave: "1"
-    finalizers:
-        - resources-finalizer.argocd.argoproj.io
-spec:
+  name: api-gateway
+  namespace: argocd
+  labels:
     project: api-gateway
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: api-gateway
 
-    source:
-        repoURL: https://github.com/angelenriquep/infra-k3s
-        targetRevision: master
-        path: kustomize/overlays/development
+  source:
+    repoURL: https://github.com/angelenriquep/infra-k3s
+    targetRevision: master
+    path: kustomize/overlays/development
 
-    destination:
-        server: https://kubernetes.default.svc
-        namespace: default
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
 
-    syncPolicy:
-        automated:
-            prune: true
-            selfHeal: true
-            allowEmpty: false
-        syncOptions:
-            - CreateNamespace=true
-            - PrunePropagationPolicy=foreground
-            - PruneLast=true
-        retry:
-            limit: 3
-            backoff:
-                duration: 5s
-                factor: 2
-                maxDuration: 3m
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
 
-    ignoreDifferences:
-        - group: apps
-          kind: Deployment
-          jsonPointers:
-              - /spec/replicas
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
 
-    revisionHistoryLimit: 10
+  revisionHistoryLimit: 10
