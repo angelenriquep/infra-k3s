@@ -1,11 +1,10 @@
-# ArgoCD Application for API Gateway Development Environment
+# ArgoCD Application for API Gateway
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-    name: api-gateway-dev
+    name: api-gateway
     namespace: argocd
     labels:
-        environment: development
         project: api-gateway
     annotations:
         argocd.argoproj.io/sync-wave: "1"
@@ -25,11 +24,11 @@ spec:
 
     syncPolicy:
         automated:
-            prune: true # Delete resources no longer in Git
-            selfHeal: true # Auto-correct cluster drift
+            prune: true
+            selfHeal: true
             allowEmpty: false
         syncOptions:
-            - CreateNamespace=true # Create namespace if not exists
+            - CreateNamespace=true
             - PrunePropagationPolicy=foreground
             - PruneLast=true
         retry:
@@ -39,12 +38,10 @@ spec:
                 factor: 2
                 maxDuration: 3m
 
-    # Health checks personalizados
     ignoreDifferences:
         - group: apps
           kind: Deployment
           jsonPointers:
-              - /spec/replicas # Ignore manual replica changes (HPA)
+              - /spec/replicas
 
-    # Notificaciones y hooks
     revisionHistoryLimit: 10
