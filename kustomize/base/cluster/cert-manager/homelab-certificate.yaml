@@ -1,0 +1,22 @@
+# TLS Certificate for homelab domains, issued by our internal CA
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: homelab-tls
+  namespace: envoy-gateway-system
+spec:
+  secretName: homelab-tls-secret
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  dnsNames:
+    - "api.homelab.local"
+    - "argocd.homelab.local"
+    - "grafana.homelab.local"
+    - "*.homelab.local"
+  issuerRef:
+    name: homelab-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

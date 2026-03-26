@@ -14,4 +14,13 @@ spec:
   listeners:
     - name: http
       protocol: HTTP
-      port: 80 # Acabara exponiendo 10080 (1000 + 80)
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: homelab-tls-secret
+            namespace: envoy-gateway-system

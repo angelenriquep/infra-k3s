@@ -6,6 +6,8 @@ resources:
     - ../../base
     # Envoy Gateway (cluster-level resources)
     - ../../base/cluster/envoy-gateway
+    # cert-manager CA and certificates
+    - ../../base/cluster/cert-manager
 
 # Development patches
 patches:
