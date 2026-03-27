@@ -10,11 +10,17 @@ spec:
         - "api.homelab.local"
     rules:
         - backendRefs:
+              # Argo Rollouts manages the weights automatically during canary
               - group: ""
                 kind: Service
                 name: backend
                 port: 3000
-                weight: 1
+                weight: 100
+              - group: ""
+                kind: Service
+                name: backend-canary
+                port: 3000
+                weight: 0
           matches:
               - path:
                     type: PathPrefix

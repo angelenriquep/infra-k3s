@@ -8,9 +8,9 @@ metadata:
     labels:
         app: backend
 ---
-# Backend Deployment
-apiVersion: apps/v1
-kind: Deployment
+# Backend Rollout (Argo Rollouts - Canary strategy)
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
     name: backend
     namespace: default
@@ -18,9 +18,25 @@ metadata:
         app: backend
 spec:
     replicas: 1
+    revisionHistoryLimit: 3
     selector:
         matchLabels:
             app: backend
+    strategy:
+        canary:
+            canaryService: backend-canary
+            stableService: backend
+            steps:
+                - setWeight: 20
+                - pause: { duration: 30s }
+                - setWeight: 50
+                - pause: { duration: 30s }
+                - setWeight: 100
+            trafficRouting:
+                plugins:
+                    argoproj-labs/gatewayAPI:
+                        httpRoute: backend-api
+                        namespace: default
     template:
         metadata:
             labels:
@@ -59,7 +75,7 @@ spec:
                       initialDelaySeconds: 5
                       periodSeconds: 5
 ---
-# Backend Service - NodePort for direct access
+# Stable Service - receives production traffic
 apiVersion: v1
 kind: Service
 metadata:
@@ -67,6 +83,24 @@ metadata:
     namespace: default
     labels:
         app: backend
+spec:
+    selector:
+        app: backend
+    ports:
+        - name: http
+          port: 3000
+          targetPort: 3000
+    type: ClusterIP
+---
+# Canary Service - receives canary traffic during rollout
+apiVersion: v1
+kind: Service
+metadata:
+    name: backend-canary
+    namespace: default
+    labels:
+        app: backend
+        role: canary
 spec:
     selector:
         app: backend
