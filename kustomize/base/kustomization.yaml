@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
     - backend/backend-api.yaml
+    - backend/network-policy.yaml
     - cluster/minio/minio-deployment.yaml
     - cluster/minio/minio-init-job.yaml
 
