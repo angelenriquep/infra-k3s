@@ -8,6 +8,8 @@ resources:
     - ../../base/cluster/envoy-gateway
     # cert-manager CA and certificates
     - ../../base/cluster/cert-manager
+    # Kyverno policies
+    - ../../base/cluster/kyverno-policies
 
 # Development patches
 patches:

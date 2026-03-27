@@ -1,0 +1,114 @@
+name: Build, Scan & Push Backend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "src/backend/**"
+  pull_request:
+    branches: [master]
+    paths:
+      - "src/backend/**"
+
+env:
+  IMAGE_NAME: mockingbird2912/api-gateway-backend
+  TRIVY_VERSION: "0.69.3"
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Download Trivy and verify SHA256 checksum
+      - name: Download and verify Trivy
+        run: |
+          TRIVY_TAR="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          CHECKSUM_FILE="trivy_${TRIVY_VERSION}_checksums.txt"
+
+          # Download binary and checksums
+          curl -sfL -o "${TRIVY_TAR}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${TRIVY_TAR}"
+          curl -sfL -o "${CHECKSUM_FILE}" \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${CHECKSUM_FILE}"
+
+          # Verify SHA256 checksum
+          EXPECTED=$(grep "${TRIVY_TAR}" "${CHECKSUM_FILE}" | awk '{print $1}')
+          ACTUAL=$(sha256sum "${TRIVY_TAR}" | awk '{print $1}')
+
+          echo "Expected SHA256: ${EXPECTED}"
+          echo "Actual SHA256:   ${ACTUAL}"
+
+          if [ "${EXPECTED}" != "${ACTUAL}" ]; then
+            echo "::error::Trivy checksum verification FAILED!"
+            exit 1
+          fi
+          echo "✅ Trivy checksum verified"
+
+          # Extract and install
+          tar -xzf "${TRIVY_TAR}" trivy
+          sudo mv trivy /usr/local/bin/
+          trivy --version
+
+      # Scan for vulnerabilities
+      - name: Scan image for vulnerabilities
+        run: |
+          trivy image \
+            --exit-code 1 \
+            --severity CRITICAL,HIGH \
+            --ignore-unfixed \
+            --format table \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Generate SARIF report for GitHub Security tab
+      - name: Generate SARIF report
+        if: always()
+        run: |
+          trivy image \
+            --severity CRITICAL,HIGH,MEDIUM \
+            --format sarif \
+            --output trivy-results.sarif \
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+
+      # Push only on master, only if scan passes
+      - name: Login to Docker Hub
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Push image
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        uses: docker/build-push-action@v6
+        with:
+          context: ./src/backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

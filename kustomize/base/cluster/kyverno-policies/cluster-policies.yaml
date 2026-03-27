@@ -1,0 +1,86 @@
+# Require resource limits on all containers
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-resource-limits
+  annotations:
+    policies.kyverno.io/title: Require Resource Limits
+    policies.kyverno.io/description: All containers must have memory limits defined.
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Audit # Audit = warn only, Enforce = block
+  background: true
+  rules:
+    - name: check-memory-limits
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      validate:
+        message: "Memory limits are required for container {{request.object.spec.containers[].name}}"
+        pattern:
+          spec:
+            containers:
+              - resources:
+                  limits:
+                    memory: "?*"
+---
+# Disallow latest tag
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/description: Images must not use the 'latest' tag.
+    policies.kyverno.io/severity: medium
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-image-tag
+      match:
+        any:
+          - resources:
+              kinds:
+                - Pod
+      exclude:
+        any:
+          - resources:
+              namespaces:
+                - kube-system
+                - argocd
+      validate:
+        message: "Image '{{request.object.spec.containers[].image}}' should not use the 'latest' tag."
+        pattern:
+          spec:
+            containers:
+              - image: "!*:latest"
+---
+# Require labels on deployments and rollouts
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-app-label
+  annotations:
+    policies.kyverno.io/title: Require App Label
+    policies.kyverno.io/description: Deployments and Rollouts must have an 'app' label.
+    policies.kyverno.io/severity: low
+spec:
+  validationFailureAction: Audit
+  background: true
+  rules:
+    - name: check-app-label
+      match:
+        any:
+          - resources:
+              kinds:
+                - Deployment
+                - argoproj.io/v1alpha1/Rollout
+      validate:
+        message: "The label 'app' is required."
+        pattern:
+          metadata:
+            labels:
+              app: "?*"
