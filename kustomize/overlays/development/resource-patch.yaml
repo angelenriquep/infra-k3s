@@ -1,17 +1,10 @@
 # Development: Lower resource requirements
-apiVersion: argoproj.io/v1alpha1
-kind: Rollout
-metadata:
-    name: backend
-spec:
-    template:
-        spec:
-            containers:
-                - name: backend
-                  resources:
-                      requests:
-                          cpu: 10m
-                          memory: 32Mi
-                      limits:
-                          cpu: 100m
-                          memory: 128Mi
+- op: replace
+  path: /spec/template/spec/containers/0/resources
+  value:
+      requests:
+          cpu: 10m
+          memory: 32Mi
+      limits:
+          cpu: 100m
+          memory: 128Mi

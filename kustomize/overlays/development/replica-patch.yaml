@@ -1,7 +1,4 @@
 # Development: Single replica
-apiVersion: argoproj.io/v1alpha1
-kind: Rollout
-metadata:
-    name: backend
-spec:
-    replicas: 1
+- op: replace
+  path: /spec/replicas
+  value: 1

@@ -12,7 +12,17 @@ resources:
 # Development patches
 patches:
     - path: replica-patch.yaml
+      target:
+          group: argoproj.io
+          version: v1alpha1
+          kind: Rollout
+          name: backend
     - path: resource-patch.yaml
+      target:
+          group: argoproj.io
+          version: v1alpha1
+          kind: Rollout
+          name: backend
 
 # Development-specific ConfigMaps
 configMapGenerator:
