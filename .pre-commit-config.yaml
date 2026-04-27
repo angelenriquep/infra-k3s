@@ -8,7 +8,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
-        args: ["--allow-multiple-documents"]
+        args: [ "--allow-multiple-documents" ]
       - id: check-added-large-files
       - id: check-merge-conflict
 
@@ -16,26 +16,29 @@ repos:
     rev: v1.32.0
     hooks:
       - id: yamllint
-        args: [-c=.yamllint.yaml]
+        args: [ -c=.yamllint.yaml ]
 
   - repo: local
     hooks:
-      - id: kustomize-validate
-        name: Validate Kustomize builds
+      - id: manifests-validate
+        name: Validate Kubernetes manifests
         entry: bash
         language: script
-        files: '^api-gateway/.*\.yaml$'
+        files: "^(manifests|argocd)/.*\\.ya?ml$"
         args:
           - -c
           - |
-            echo "🔍 Validating Kustomize builds..."
-            if command -v kustomize >/dev/null 2>&1; then
-              kustomize build api-gateway/overlays/development >/dev/null
-              kustomize build api-gateway/overlays/production >/dev/null
-              echo "✅ Kustomize validation passed"
-            else
-              echo "⚠️  Kustomize not found, skipping validation"
-            fi
+            echo "🔍 Validating YAML manifests..."
+            python - <<'PY'
+            import pathlib
+            import yaml
+
+            paths = list(pathlib.Path('manifests').rglob('*.yaml')) + list(pathlib.Path('argocd').rglob('*.yaml'))
+            for p in paths:
+                with open(p, 'r', encoding='utf-8') as f:
+                    list(yaml.safe_load_all(f))
+            print(f"✅ YAML validation passed ({len(paths)} files)")
+            PY
 
       - id: check-frontend-files
         name: Check frontend files syntax

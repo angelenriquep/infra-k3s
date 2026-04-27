@@ -2,14 +2,14 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ main, develop ]
     paths:
-      - "kustomize/**"
+      - "manifests/**"
       - "argocd/**"
   pull_request:
-    branches: [main]
+    branches: [ main ]
     paths:
-      - "kustomize/**"
+      - "manifests/**"
       - "argocd/**"
 
 env:
@@ -25,24 +25,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-        with:
-          kustomize-version: "5.0.0"
-
-      - name: Validate Kustomize builds
-        run: |
-          echo "🔍 Validating development overlay..."
-          kustomize build kustomize/overlays/development > /tmp/dev-manifest.yaml
-
-          echo "✅ Kustomize builds successful"
-
       - name: Validate Kubernetes YAML
-        uses: instrumenta/kubeval-action@master
-        with:
-          files: |
-            /tmp/dev-manifest.yaml
-            /tmp/prod-manifest.yaml
+        run: |
+          echo "🔍 Validating manifests and ArgoCD resources..."
+          python - <<'PY'
+          import pathlib
+          import yaml
+
+          roots = [pathlib.Path('manifests'), pathlib.Path('argocd')]
+          files = []
+          for root in roots:
+              if root.exists():
+                  files.extend(root.rglob('*.yaml'))
+
+          for file in files:
+              with open(file, 'r', encoding='utf-8') as f:
+                  list(yaml.safe_load_all(f))
+
+          print(f"✅ YAML validation passed ({len(files)} files)")
+          PY
 
       - name: Validate ArgoCD Applications
         run: |
@@ -84,19 +85,16 @@ jobs:
   build-manifests:
     runs-on: ubuntu-latest
     name: Build and Validate Manifests
-    needs: [validate, security]
+    needs: [ validate, security ]
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-
       - name: Build development manifests
         run: |
           mkdir -p built-manifests/development
-          kustomize build kustomize/overlays/development > built-manifests/development/all.yaml
+          cat manifests/apps/api-gateway/*.yaml > built-manifests/development/all.yaml
 
           echo "📊 Development Manifest Stats:"
           echo "Resources: $(grep -c '^---' built-manifests/development/all.yaml)"

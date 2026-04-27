@@ -15,14 +15,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v2
-
-      - name: Build all manifests for scanning
+      - name: Collect manifests for scanning
         run: |
           mkdir -p security-scan
-          kustomize build api-gateway/overlays/development > security-scan/dev.yaml
-          kustomize build api-gateway/overlays/production > security-scan/prod.yaml
+          cp manifests/apps/api-gateway/*.yaml security-scan/
+          cp manifests/cluster/minio/*.yaml security-scan/
+          cp manifests/cluster/metallb/*.yaml security-scan/
+          cp argocd/applications/*.yaml security-scan/
 
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@master

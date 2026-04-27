@@ -1,4 +1,0 @@
-# Development: Single replica
-- op: replace
-  path: /spec/replicas
-  value: 1

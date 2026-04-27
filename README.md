@@ -1,5 +1,7 @@
 # ArgoCD Setup for API Gateway
 
+1) This set up uses VMs:
+
 ```bash
 ssh angel@192.168.88.238
 sudo virsh list --all
@@ -37,4 +39,38 @@ sudo vi /etc/hosts
 192.168.88.243  api.homelab.local
 192.168.88.243  argocd.homelab.local
 192.168.88.243  grafana.homelab.local
+```
+
+## Pending to add:
+
+metalLB - l3, l4
+Metric server - node metrics 
+Vault - secrets 
+Rookceph - storage 
+Prometheus - monitoring 
+Grafana - visualization 
+Loki - logs
+Gitlab - source code
+Authentik - ldap
+
+
+```
+Internet
+   │
+   ▼
+┌─────────────────────────────────────────┐
+│ MetalLB (Load Balancer)                 │
+│ Asigna IP: 192.168.88.250               │
+│ (capa de red: L3/L4)                    │
+└────────────┬────────────────────────────┘
+             │ tráfico L4
+             ▼
+┌─────────────────────────────────────────┐
+│ Envoy Gateway (api-gateway)             │
+│ Enruta HTTP/HTTPS por hostname/path     │
+│ (capa de aplicación: L7)                │
+└────────────┬────────────────────────────┘
+             │ tráfico HTTP
+             ▼
+        Backend Services
 ```

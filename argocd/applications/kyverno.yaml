@@ -1,3 +1,4 @@
+# Policy engine: validates and mutates cluster resources via admission controllers. Blocks or alerts on policy violations (limits, tags, labels).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

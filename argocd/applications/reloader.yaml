@@ -1,3 +1,4 @@
+# Automatically restarts pods when an associated ConfigMap or Secret changes. Eliminates manual rollouts after config updates.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

@@ -8,6 +8,7 @@ resources:
   - reloader.yaml
   - argo-rollouts.yaml
   - kyverno.yaml
+  - minio.yaml
 labels:
   - pairs:
       managed-by: argocd
